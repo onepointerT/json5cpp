@@ -35,50 +35,34 @@ template <typename T> error read( const value &in, T &out );
 class writer final : public builder
 {
 public:
-	writer( document &doc, const writer_params &wp ): builder( doc ), _params( wp ) { }
+	writer( document &doc, const writer_params &wp );
 
-	const writer_params &params() const noexcept { return _params; }
+	const writer_params &params() const noexcept;
 
 private:
 	writer_params _params;
 };
 
 //---------------------------------------------------------------------------------------------------------------------
-inline string_view get_name_slice( const char *names, size_t index )
-{
-	size_t numCommas = index;
-	while ( numCommas > 0 && *names )
-		if ( *names++ == ',' )
-			--numCommas;
-
-	while ( *names && *names <= 32 )
-		++names;
-
-	size_t length = 0;
-	while ( names[length] > 32 && names[length] != ',' )
-		++length;
-
-	return string_view( names, length );
-}
+string_view get_name_slice( const char *names, size_t index );
 
 /* Forward declarations */
 template <typename T> value write( writer &w, const T &in );
 
 //---------------------------------------------------------------------------------------------------------------------
-inline value write( writer &w, bool in ) { return value( in ); }
-inline value write( writer &w, int in ) { return value( double( in ) ); }
-inline value write( writer &w, unsigned in ) { return value( double( in ) ); }
-inline value write( writer &w, float in ) { return value( double( in ) ); }
-inline value write( writer &w, double in ) { return value( in ); }
-inline value write( writer &w, const char *in ) { return w.new_string( in ); }
-inline value write( writer &w, const string &in ) { return w.new_string( in ); }
+value write( writer &w, bool in );
+value write( writer &w, int in );
+value write( writer &w, unsigned in );
+value write( writer &w, float in );
+value write( writer &w, double in );
+value write( writer &w, const char *in );
+value write( writer &w, const string &in );
 
 //---------------------------------------------------------------------------------------------------------------------
 template <typename T>
 inline value write_array( writer &w, const T *in, size_t numItems )
 {
 	w.push_array();
-
 	for ( size_t i = 0; i < numItems; ++i )
 		w( in[i] );
 
@@ -184,7 +168,10 @@ template <typename T>
 inline value write( writer &w, const T &in )
 {
 	w.push_object();
-	write( w, class_wrapper<T>::make_named_ref_list( in ) );
+	if ( std::is_void<T>() ) {
+		return value("");
+	}
+	write( w, in );
 	return w.pop();
 }
 
@@ -194,14 +181,7 @@ inline value write( writer &w, const T &in )
 template <typename T> error read( const value &in, T &out );
 
 //---------------------------------------------------------------------------------------------------------------------
-inline error read( const value &in, bool &out )
-{
-	if ( !in.is_boolean() )
-		return { error::number_expected, in.loc() };
-
-	out = in.get_bool();
-	return { error::none };
-}
+error read( const value &in, bool &out );
 
 //---------------------------------------------------------------------------------------------------------------------
 template <typename T>
@@ -211,30 +191,16 @@ inline error read_number( const value &in, T &out )
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-inline error read( const value &in, int &out ) { return read_number( in, out ); }
-inline error read( const value &in, unsigned &out ) { return read_number( in, out ); }
-inline error read( const value &in, float &out ) { return read_number( in, out ); }
-inline error read( const value &in, double &out ) { return read_number( in, out ); }
+error read( const value &in, int &out );
+error read( const value &in, unsigned &out );
+error read( const value &in, float &out );
+error read( const value &in, double &out );
 
 //---------------------------------------------------------------------------------------------------------------------
-inline error read( const value &in, const char *&out )
-{
-	if ( !in.is_string() )
-		return { error::string_expected, in.loc() };
-
-	out = in.get_c_str();
-	return { error::none };
-}
+error read( const value &in, const char *&out );
 
 //---------------------------------------------------------------------------------------------------------------------
-inline error read( const value &in, string &out )
-{
-	if ( !in.is_string() )
-		return { error::string_expected, in.loc() };
-
-	out = in.get_c_str();
-	return { error::none };
-}
+inline error read( const value &in, string &out );
 
 //---------------------------------------------------------------------------------------------------------------------
 template <typename T>
@@ -449,9 +415,12 @@ inline void to_document( document &doc, const T &in, const writer_params &wp )
 template <typename T>
 inline void to_string( string &str, const T &in, const writer_params &wp )
 {
+	if ( std::is_same<const char*, T>() ) {
+		return;
+	}
 	document doc;
 	to_document( doc, in );
-	to_string( str, doc, wp );
+	to_string( str, doc.get_c_str(), wp );
 }
 
 //---------------------------------------------------------------------------------------------------------------------
