@@ -1,4 +1,3 @@
-#pragma once
 
 #include "json5.hpp"
 
@@ -242,6 +241,11 @@ document::document( document&& rValue ) noexcept
 {
 	assign_rvalue( _JSON5_FORWARD<document>( rValue ) );
 }
+
+
+document::document( const char* rValue ) noexcept
+	:	detail::value( rValue )
+{}
 
 // Copy data from another document (does a deep copy)
 document& document::operator=( const document &copy ) {

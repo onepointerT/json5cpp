@@ -200,6 +200,9 @@ public:
 	// Construct a document from r-value
 	document( document &&rValue ) noexcept;
 
+	// Construct a document from a c-str
+	document( const char* rValue ) noexcept;
+
 	// Copy data from another document (does a deep copy)
 	document &operator=( const document &copy );
 
